@@ -142,6 +142,7 @@ TimeoutStartSec=30
 ExecStartPre=/bin/bash -c '/sbin/ip addr add $(/sbin/ip -4 -br addr show wlan0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+")/32 dev eth0'
 ExecStartPre=/sbin/ip link set dev eth0 up
 ExecStartPre=/sbin/ip link set wlan0 promisc on
+ExecStartPre=/usr/sbin/iw wlan0 set power_save off
 ExecStart=-/usr/sbin/parprouted eth0 wlan0
 ExecStopPost=/sbin/ip link set wlan0 promisc off
 ExecStopPost=/sbin/ip link set dev eth0 down
@@ -180,4 +181,30 @@ netplan generate
 
 ```
 reboot
+```
+
+### resolv.conf - DNS
+
+```
+cat <<EOF > /etc/systemd/resolved.conf
+[Resolve]
+DNS=8.8.8.8
+FallbackDNS=8.8.4.4
+#Domains=
+#LLMNR=no
+#MulticastDNS=no
+#DNSSEC=no
+#DNSOverTLS=no
+#Cache=no-negative
+#DNSStubListener=yes
+#ReadEtcHosts=yes
+EOF
+systemctl restart systemd-resolved
+```
+
+### Optional: install wavemon to watch and monitor wifi
+
+```
+apt install wavemon
+wavemon
 ```
