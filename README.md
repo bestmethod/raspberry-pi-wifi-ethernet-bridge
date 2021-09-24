@@ -16,7 +16,7 @@ The following components are covered:
 
 * netplan - to connect to wifi itself
 * dhcpcd5 - dhcp client for wlan0
-* avahi-daemon - mDNS request forwarding
+* avahi-daemon - mDNS request forwarding, required by Bonjour
 * dhcp-helper - dhcp forwarding so dhcp clients attached to eth0 also work
 * parprouted - routing of ARP requests, to allow for the "bridge" to work
 * openssh-server - cause it's easier than console
