@@ -8,6 +8,8 @@ I do take no responsibility for the below not working or doing damage, etc etc. 
 
 The below manual explains how to configure the pi to use as a wifi to ethernet bridge, using the ubuntu 20.04 64/32bit server images.
 
+The below manual should also work on a raspbian / raspberry PI OS and other debian-based distros. Method of connecting to wifi may vary (netplan bit may need to be replaced with whatever the other distros use).
+
 Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0, but with a /32 network. We then forward the ARP requests between interfaces.
 
 The following components are covered:
