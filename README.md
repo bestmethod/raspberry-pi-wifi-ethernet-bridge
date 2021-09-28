@@ -26,7 +26,6 @@ The following components are covered:
 * custom service script for replicating IP across 2 interfaces
 * openssh-server - cause it's easier than console
 * disabling the pesky unattended-upgrades (optional)
-* optional: add option to configure netplan straight from the sd card from a card reader
 
 What isn't covered:
 
@@ -281,14 +280,3 @@ systemctl restart systemd-resolved
 apt install wavemon
 wavemon
 ```
-
-### Optional: allow configuring of netplan from the sdcard
-
-```
-mkdir /boot/firmware/netplan
-cp /etc/netplan/50-cloud-init.yaml /boot/firmware/netplan/
-mount -o bind /boot/firmware/netplan /etc/netplan
-echo "/boot/firmware/netplan /etc/netplan none defaults,bind 0 0" >> /etc/fstab
-```
-
-From now on, to configure WiFi, you can either edit /etc/netplan/... from the loaded system, or insert the sd card into a card reader and edit netplan/... files directly there.
