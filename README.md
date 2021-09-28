@@ -1,5 +1,9 @@
 # Configuring the pi as a wifi to ethernet bridge
 
+## Version
+
+1.0
+
 ## The legal blah-blah
 
 I do take no responsibility for the below not working or doing damage, etc etc. You get the point.
@@ -25,6 +29,8 @@ The following components are covered:
 What isn't covered:
 
 * NetBIOS/WINS proxy - no idea how
+* most of broadcast stuff (only dhcp works)
+* most of multicast stuff (only mDNS works)
 
 ## Steps
 
