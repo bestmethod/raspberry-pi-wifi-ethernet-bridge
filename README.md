@@ -2,7 +2,7 @@
 
 ## Version
 
-1.0
+1.1
 
 ## The legal blah-blah
 
@@ -23,14 +23,14 @@ The following components are covered:
 * avahi-daemon - mDNS request forwarding, required by Bonjour
 * dhcp-helper - dhcp forwarding so dhcp clients attached to eth0 also work
 * parprouted - routing of ARP requests, to allow for the "bridge" to work
+* custom service script for replicating IP across 2 interfaces
 * openssh-server - cause it's easier than console
 * disabling the pesky unattended-upgrades (optional)
+* optional: add option to configure netplan straight from the sd card from a card reader
 
 What isn't covered:
 
-* NetBIOS/WINS proxy - no idea how
-* most of broadcast stuff (only dhcp works)
-* most of multicast stuff (only mDNS works)
+* broadcast/multicast forwarding (except for mDNS and DHCP, which work)
 
 ## Steps
 
@@ -145,14 +145,7 @@ Restart=on-failure
 RestartSec=5
 TimeoutStartSec=30
 # clone the dhcp-allocated IP to eth0 so dhcp-helper will relay for the correct subnet
-ExecStartPre=/bin/bash -c '/sbin/ip addr add $(/sbin/ip -4 -br addr show wlan0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+")/32 dev eth0'
-ExecStartPre=/sbin/ip link set dev eth0 up
-ExecStartPre=/sbin/ip link set wlan0 promisc on
-ExecStartPre=/usr/sbin/iw wlan0 set power_save off
 ExecStart=-/usr/sbin/parprouted eth0 wlan0
-ExecStopPost=/sbin/ip link set wlan0 promisc off
-ExecStopPost=/sbin/ip link set dev eth0 down
-ExecStopPost=/bin/bash -c '/sbin/ip addr del $(/sbin/ip -4 -br addr show wlan0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+")/32 dev eth0'
 
 [Install]
 WantedBy=wpa_supplicant.service
@@ -160,6 +153,80 @@ EOF
 
 systemctl daemon-reload
 systemctl enable parprouted
+```
+
+### Add a monitoring bash script for replicating the IP if dhcp decides to change it
+
+```
+cat <<'EOF' > /opt/replicate-ip.sh
+#!/bin/bash
+
+DEBUG=0
+
+function bootstrap {
+    /sbin/ip link set dev eth0 up
+    /sbin/ip link set wlan0 promisc on
+    /sbin/ip link set eth0 promisc on
+    /usr/sbin/iw wlan0 set power_save off
+}
+
+function replicate {
+    WLANIP=$(/sbin/ip -4 -br addr show wlan0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+")
+    ETHIP=$(/sbin/ip -4 -br addr show eth0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+")
+    [ ${DEBUG} -eq 1 ] && echo "$(date) eth0=${ETHIP} wlan0=${WLANIP}"
+    if [ "${WLANIP}" == "" ]
+    then
+        return
+    fi
+    if [ "${WLANIP}" == "${ETHIP}" ]
+    then
+        return
+    fi
+    echo "$(date) fixing_eth0_ip, found: eth0=${ETHIP} wlan0=${WLANIP}"
+    if [ "${ETHIP}" != "" ]
+    then
+        /sbin/ip addr del ${ETHIP} dev eth0
+    fi
+    /sbin/ip addr add ${WLANIP} brd + dev eth0
+}
+
+if [ "$1" == "--debug" ]
+then
+    DEBUG=1
+fi
+
+[ ${DEBUG} -eq 1 ] && echo "$(date) bootstrapping"
+bootstrap
+[ ${DEBUG} -eq 1 ] && echo "$(date) bootstrap finished"
+while true
+do
+    [ ${DEBUG} -eq 1 ] && echo "$(date) checking interface IPs"
+    replicate
+    [ ${DEBUG} -eq 1 ] && echo "$(date) sleep 5 seconds"
+    sleep 5
+done
+EOF
+
+chmod +x /opt/replicate-ip.sh
+
+cat <<'EOF' >/usr/lib/systemd/system/replicateip.service
+[Unit]
+Description=ip monitoring and replication service
+Requires=sys-subsystem-net-devices-wlan0.device dhcpcd.service
+After=sys-subsystem-net-devices-wlan0.device dhcpcd.service
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+ExecStart=/opt/replicate-ip.sh
+
+[Install]
+WantedBy=wpa_supplicant.service
+EOF
+
+systemctl daemon-reload
+systemctl enable replicateip
 ```
 
 ### Reconfigure netplan to not acquire an IP - dhcpcd5 will handle this from now on
@@ -214,3 +281,14 @@ systemctl restart systemd-resolved
 apt install wavemon
 wavemon
 ```
+
+### Optional: allow configuring of netplan from the sdcard
+
+```
+mkdir /boot/firmware/netplan
+cp /etc/netplan/50-cloud-init.yaml /boot/firmware/netplan/
+mount -o bind /boot/firmware/netplan /etc/netplan
+echo "/boot/firmware/netplan /etc/netplan none defaults,bind 0 0" >> /etc/fstab
+```
+
+From now on, to configure WiFi, you can either edit /etc/netplan/... from the loaded system, or insert the sd card into a card reader and edit netplan/... files directly there.
