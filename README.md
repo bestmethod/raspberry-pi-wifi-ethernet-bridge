@@ -10,7 +10,7 @@ I do take no responsibility for the below not working or doing damage, etc etc. 
 
 ## Synopsis
 
-Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0, but with a /32 network. We then forward the ARP requests between interfaces.
+Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0. We then forward the ARP requests between interfaces. The parprouted and replicateip services are the ones that make this happen. dhcp-helper is for dhcp routing and avahi is for mDNS forwarding.
 
 The following components are covered:
 
