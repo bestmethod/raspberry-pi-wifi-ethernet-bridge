@@ -81,6 +81,8 @@ iw wlan0 info; ip addr show wlan0; ip route; echo; journalctl -b --no-pager -q |
 
 ```
 apt update && apt -y upgrade && apt -y install parprouted dhcp-helper avahi-daemon dhcpcd5 openssh-server
+systemctl enable ssh
+systemctl start ssh
 ```
 
 Note: if you see `Could not get lock /var/lib/dpkg/lock-frontend. It is held by process ... (unattended-upgr)`, you need to wait for first run of unattended upgrades to finish before repeating the above step.
