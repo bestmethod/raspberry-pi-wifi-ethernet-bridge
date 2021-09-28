@@ -67,6 +67,7 @@ network={
  key_mgmt=WPA-PSK
 }
 EOF
+rfkill unblock wifi
 reboot
 ```
 
