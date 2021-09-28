@@ -10,15 +10,11 @@ I do take no responsibility for the below not working or doing damage, etc etc. 
 
 ## Synopsis
 
-The below manual explains how to configure the pi to use as a wifi to ethernet bridge, using the ubuntu 20.04 64/32bit server images.
-
-The below manual should also work on a raspbian / raspberry PI OS and other debian-based distros. Method of connecting to wifi may vary (netplan bit may need to be replaced with whatever the other distros use).
-
 Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0, but with a /32 network. We then forward the ARP requests between interfaces.
 
 The following components are covered:
 
-* netplan - to connect to wifi itself
+* netplan (ubuntu) OR wpa_supplicant (raspberry pi OS) - to connect to wifi itself
 * dhcpcd5 - dhcp client for wlan0
 * avahi-daemon - mDNS request forwarding, required by Bonjour
 * dhcp-helper - dhcp forwarding so dhcp clients attached to eth0 also work
@@ -34,6 +30,8 @@ What isn't covered:
 ## Steps
 
 ### Connect to wifi
+
+#### Ubuntu 20.04
 
 ```
 cat <<EOF > /etc/netplan/50-cloud-init.yaml
@@ -53,6 +51,23 @@ network:
 EOF
 netplan generate
 netplan apply
+```
+
+#### Raspberry Pi OS
+
+```
+cat <<'EOF' > /etc/wpa_supplicant/wpa_supplicant.conf
+country=UK
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+network={
+ ssid="YOURSSID"
+ scan_ssid=1
+ psk="YOURPASSWORD"
+ key_mgmt=WPA-PSK
+}
+EOF
+reboot
 ```
 
 ### Check wifi connection status, fix above if required
@@ -79,7 +94,7 @@ ip link ls
 
 ### You can now ssh in to the pi to continue the installation, easier that way :)
 
-### Disable unattented upgrades
+### Disable unattented upgrades (if installed)
 
 ```
 dpkg-reconfigure unattended-upgrades
@@ -147,7 +162,7 @@ TimeoutStartSec=30
 ExecStart=-/usr/sbin/parprouted eth0 wlan0
 
 [Install]
-WantedBy=wpa_supplicant.service
+WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
@@ -211,8 +226,8 @@ chmod +x /opt/replicate-ip.sh
 cat <<'EOF' >/usr/lib/systemd/system/replicateip.service
 [Unit]
 Description=ip monitoring and replication service
-Requires=sys-subsystem-net-devices-wlan0.device dhcpcd.service
-After=sys-subsystem-net-devices-wlan0.device dhcpcd.service
+Requires=sys-subsystem-net-devices-wlan0.device dhcpcd.service parprouted.service
+After=sys-subsystem-net-devices-wlan0.device dhcpcd.service parprouted.service
 
 [Service]
 Restart=on-failure
@@ -221,14 +236,14 @@ TimeoutStartSec=30
 ExecStart=/opt/replicate-ip.sh
 
 [Install]
-WantedBy=wpa_supplicant.service
+WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
 systemctl enable replicateip
 ```
 
-### Reconfigure netplan to not acquire an IP - dhcpcd5 will handle this from now on
+### Ubuntu 20.04 only: Reconfigure netplan to not acquire an IP - dhcpcd5 will handle this from now on
 
 ```
 cat <<EOF > /etc/netplan/50-cloud-init.yaml
