@@ -2,7 +2,7 @@
 
 ## Version
 
-1.1
+1.2
 
 ## The legal blah-blah
 
@@ -10,7 +10,7 @@ I do take no responsibility for the below not working or doing damage, etc etc. 
 
 ## Synopsis
 
-Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0. We then forward the ARP requests between interfaces. The parprouted and replicateip services are the ones that make this happen. dhcp-helper is for dhcp routing and avahi is for mDNS forwarding.
+Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0. We then forward the ARP requests between interfaces. The parprouted and replicateip services are the ones that make this happen. dhcp-helper is for dhcp routing and avahi is for mDNS forwarding. A custom forwarding binary and startup script allow for other udp broadcast and multicast forwarding.
 
 The following components are covered:
 
@@ -22,10 +22,7 @@ The following components are covered:
 * custom service script for replicating IP across 2 interfaces
 * openssh-server - cause it's easier than console
 * disabling the pesky unattended-upgrades (optional)
-
-What isn't covered:
-
-* broadcast/multicast forwarding (except for mDNS and DHCP, which work)
+* udp-relay for broadcast/multicast udp relay (dlna/ssdp, netbios, etc)
 
 ## Steps
 
@@ -297,4 +294,88 @@ systemctl restart systemd-resolved
 ```
 apt install wavemon
 wavemon
+```
+
+### Add support for boradcast/multicast (adjust the start script to your needs)
+
+#### install binary
+
+```
+apt -y install gcc make git
+git clone https://github.com/bestmethod/udp-broadcast-relay-redux.git
+cd udp-broadcast-relay-redux/
+make
+cp udp-broadcast-relay-redux /usr/sbin/udp-relay
+chmod 755 /usr/sbin/udp-relay
+```
+
+#### install script
+
+```
+cat <<'EOF' > /usr/sbin/udp-relay-start.sh
+#!/bin/bash
+
+# ssdp / dlna
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 1900 --multicast 239.255.255.250
+if [ $? -ne 0 ]
+then
+    /usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 1900
+    [ $? -eq 0 ] && echo "started ssdp without adding multicast group" || echo "failed to start ssdp"
+else
+    echo "started ssdp"
+fi
+
+# lifx bulb discovery
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 56700
+[ $? -eq 0 ] && echo "started lifx" || echo "failed to start lifx"
+
+# broadlink IR emmiter
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 80
+[ $? -eq 0 ] && echo "started broadlink IR" || echo "failed to start broadlink IR"
+
+# unifi discovery
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 10001
+[ $? -eq 0 ] && echo "started unifi" || echo "failed to start unifi"
+
+# sonos
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 6969
+[ $? -eq 0 ] && echo "started sonos 1" || echo "failed to start sonos 1"
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 1901
+[ $? -eq 0 ] && echo "started sonos 2" || echo "failed to start sonos 2"
+
+# netbios
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 136
+[ $? -eq 0 ] && echo "started netbios 1" || echo "failed to start netbios 1"
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 137
+[ $? -eq 0 ] && echo "started netbios 2" || echo "failed to start netbios 2"
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 138
+[ $? -eq 0 ] && echo "started netbios 3" || echo "failed to start netbios 3"
+/usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 139
+[ $? -eq 0 ] && echo "started netbios 4" || echo "failed to start netbios 4"
+
+# done
+echo "init complete"
+EOF
+chmod 755 /usr/sbin/udp-relay-start.sh
+```
+
+#### install systemd unit
+
+```
+at <<'EOF' > /usr/lib/systemd/system/udprelay.service
+[Unit]
+Description=UDP Broadcast and Multicast Relay
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/udp-relay-start.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable udprelay
+systemctl start udprelay
+systemctl status udprelay
+jouranctl -u udprelay --no-pager
 ```
