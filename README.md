@@ -2,7 +2,7 @@
 
 ## Version
 
-1.2
+1.3
 
 ## The legal blah-blah
 
@@ -16,13 +16,12 @@ The following components are covered:
 
 * netplan (ubuntu) OR wpa_supplicant (raspberry pi OS) - to connect to wifi itself
 * dhcpcd5 - dhcp client for wlan0
-* avahi-daemon - mDNS request forwarding, required by Bonjour
 * dhcp-helper - dhcp forwarding so dhcp clients attached to eth0 also work
 * parprouted - routing of ARP requests, to allow for the "bridge" to work
 * custom service script for replicating IP across 2 interfaces
 * openssh-server - cause it's easier than console
 * disabling the pesky unattended-upgrades (optional)
-* udp-relay for broadcast/multicast udp relay (dlna/ssdp, netbios, etc)
+* udp-relay for broadcast/multicast udp relay (mdns, dlna/ssdp, netbios, etc)
 
 ## Steps
 
@@ -77,7 +76,7 @@ iw wlan0 info; ip addr show wlan0; ip route; echo; journalctl -b --no-pager -q |
 ### Install dependencies and openssh
 
 ```
-apt update && apt -y upgrade && apt -y install parprouted dhcp-helper avahi-daemon dhcpcd5 openssh-server
+apt update && apt -y upgrade && apt -y install parprouted dhcp-helper dhcpcd5 openssh-server
 systemctl enable ssh
 systemctl start ssh
 ```
@@ -106,7 +105,7 @@ dpkg-reconfigure unattended-upgrades
 ```
 systemctl enable dhcp-helper
 systemctl enable dhcpcd
-systemctl enable avahi-daemon
+systemctl disable avahi-daemon # in case it's installed, this may fail if avahi daemon is not installed
 ```
 
 ### Configure ip forwarding
@@ -130,16 +129,6 @@ egrep 'denyinterfaces|option ip-forward' /etc/dhcpcd.conf
 cat > /etc/default/dhcp-helper <<EOF
 DHCPHELPER_OPTS="-b wlan0"
 EOF
-```
-
-### Configure avahi
-
-```
-sed -i'' 's/#enable-reflector=no/enable-reflector=yes/' /etc/avahi/avahi-daemon.conf
-grep '^enable-reflector=yes$' /etc/avahi/avahi-daemon.conf || {
-  printf "something went wrong...\n\n"
-  printf "Manually set 'enable-reflector=yes in /etc/avahi/avahi-daemon.conf'\n"
-}
 ```
 
 ### Configure parprouted and setup a service
@@ -314,6 +303,16 @@ chmod 755 /usr/sbin/udp-relay
 ```
 cat <<'EOF' > /usr/sbin/udp-relay-start.sh
 #!/bin/bash
+
+# mDNS
+/usr/sbin/udp-relay -f --id 1 --port 5353 --dev eth0 --dev wlan0 --multicast 224.0.0.251 -s 1.1.1.1
+if [ $? -ne 0 ]
+then
+    /usr/sbin/udp-relay -f --id 1 --port 5353 --dev eth0 --dev wlan0 -s 1.1.1.1
+    [ $? -eq 0 ] && echo "started mdns without adding multicast group" || echo "failed to start mdns"
+else
+    echo "started mdns"
+fi
 
 # ssdp / dlna
 /usr/sbin/udp-relay -f --id 1 --dev eth0 --dev wlan0 --port 1900 --multicast 239.255.255.250
