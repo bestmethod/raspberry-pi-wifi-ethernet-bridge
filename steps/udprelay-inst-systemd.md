@@ -9,6 +9,9 @@ After=sys-subsystem-net-devices-wlan0.device dhcpcd.service parprouted.service r
 
 [Service]
 Type=forking
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
 ExecStart=/usr/sbin/udp-relay-start.sh
 
 [Install]
