@@ -4,6 +4,18 @@
 cat <<'EOF' > /usr/sbin/udp-relay-start.sh
 #!/bin/bash
 
+# fail if IP is not provided
+if [ "$(/sbin/ip -4 -br addr show wlan0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+")" == "" ]
+then
+        echo "ERROR: wlan0 does not have an IP"
+        exit 1
+fi
+if [ "$(/sbin/ip -4 -br addr show eth0 | /bin/grep -Po "\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+")" == "" ]
+then
+        echo "ERROR: eth0 does not have an IP"
+        exit 1
+fi
+
 # mDNS
 /usr/sbin/udp-relay -f --id 1 --port 5353 --dev eth0 --dev wlan0 --multicast 224.0.0.251 -s 1.1.1.1
 if [ $? -ne 0 ]
