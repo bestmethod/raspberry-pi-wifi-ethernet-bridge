@@ -2,7 +2,7 @@
 
 ## Document version
 
-1.4
+1.4.1
 
 ## The legal blah-blah
 
