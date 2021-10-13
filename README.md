@@ -12,6 +12,17 @@ I do take no responsibility for the below not working or doing damage, etc etc. 
 
 Since wlan0 cannot be simply bridged to eth0, we achieve this by reflecting the same wlan0 IP on eth0. We then forward the ARP requests between interfaces. The parprouted and replicateip services are the ones that make this happen. dhcp-helper is for dhcp routing. A custom forwarding binary and startup script allow for other udp broadcast and multicast forwarding.
 
+## Default credentials
+
+System | Username | Password
+--- | --- | ---
+Raspberry Pi OS | pi | raspberry
+Ubuntu 20.04 | ubuntu | ubuntu
+
+Once logged in, when following the below manual, use `sudo -i` to switch to root first.
+
+## Safety note: do not forget to change the password for the default user to something secure!
+
 ## Steps
 
 - Connect to WiFi
