@@ -21,7 +21,7 @@ Ubuntu 20.04 | ubuntu | ubuntu
 
 Once logged in, when following the below manual, use `sudo -i` to switch to root first.
 
-## Safety note: do not forget to change the password for the default user to something secure!
+### Safety note: do not forget to change the password for the default user to something secure!
 
 ## Steps
 
