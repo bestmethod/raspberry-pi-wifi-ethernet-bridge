@@ -4,6 +4,8 @@
 cat <<'EOF' > /usr/lib/systemd/system/udprelay.service
 [Unit]
 Description=UDP Broadcast and Multicast Relay
+Requires=sys-subsystem-net-devices-wlan0.device dhcpcd.service parprouted.service replicateip.service
+After=sys-subsystem-net-devices-wlan0.device dhcpcd.service parprouted.service replicateip.service
 
 [Service]
 Type=forking
