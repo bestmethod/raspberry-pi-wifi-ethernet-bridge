@@ -2,7 +2,7 @@
 
 ## Document version
 
-1.4.1
+1.5
 
 ## The legal blah-blah
 
@@ -27,7 +27,9 @@ Once logged in, when following the below manual, use `sudo -i` to switch to root
 
 - Connect to WiFi
   - [Ubuntu 20.04](steps/connect-wifi-ubuntu.md)
-  - [Raspberry Pi OS](steps/connect-wifi-rpi.md)
+  - Raspberry Pi OS - pick one from below:
+    - [From Pi OS](steps/connect-wifi-rpi.md)
+    - [Headless Setup](steps/headless.md)
 - [Check WiFi connection status](steps/check-wifi-stat.md)
 - [Install dependencies and openssh](steps/install-deps.md)
 - [Get current IP, routes and link status](steps/get-ip.md)
@@ -50,3 +52,4 @@ Once logged in, when following the below manual, use `sudo -i` to switch to root
   - [Install systemd unit](steps/udprelay-inst-systemd.md)
 - [Optional: install wavemon to watch and monitor wifi](steps/wavemon.md)
 - [Test: final reboot and check services](steps/test.md)
+- [Optional: overlay root filesystem to set SD card as read-only](steps/overlayroot.md)
