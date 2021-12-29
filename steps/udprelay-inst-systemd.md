@@ -22,5 +22,5 @@ systemctl daemon-reload
 systemctl enable udprelay
 systemctl start udprelay
 systemctl status udprelay
-jouranctl -u udprelay --no-pager
+journalctl -u udprelay --no-pager
 ```
